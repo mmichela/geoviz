@@ -1,0 +1,119 @@
+---
+title: "geovizR - intro"
+author: "Marco Michelangeli"
+date: "26 luglio 2017"
+output: html_document
+---
+
+Lately I found myself working a bit with geo data, learning many things of an niche but very interesting field! After all this work therefore I have decided to share what I have learned by writing a small series of post (I hope to have time for it!)aimed to introduce newby to this field of work. I presuppose only that you know a bit of R and its main packages.
+
+But lets get started! In this first post I would like to smoothly introduce you to the R packages that are mostly used with geodata and show how easy is to plot points on map!
+
+We will use the following packages:
+
+```{r}
+library(dplyr)
+library(ggmap)
+library(leaflet)
+library(jsonlite)
+```
+
+First package to introduce is **ggmap**. It is simply a wrapper for mainly the google map API (it also support Stamen and OpenStreet among others).The main functions of ggmap are get_map() and ggmap(). Give them a location coordinates and the map is yours! 
+
+```{r}
+# First get Milan coordinates
+Milan<-c(lat=45.464211, lon=9.191383)
+#Extract the map from Google map at a specific zoom (this is up to you!)
+mapMilan <- get_map(location=Milan, zoom=10)
+#Visualize the map
+ggmap(mapMilan)
+```
+
+This is awsome and super easy! And it will get easier: ggmap has another function for doing the same operation in less coding, it is called qmap() and works as follows:
+
+```{r}
+mapMilan<-qmap("Milan", zoom = 10)
+mapMilan
+
+```
+
+No need for coordinates and we get a one step process (get map + visualization). 
+As we do with ggplot() and plot() we need to decide if we want a more complete function (ggmap()), with more freedom for building multiple layers of data or if we want a quick and fast function that just spits out a map (qmap()).
+
+The customization of  ggmap is almost endless and we will see more in next articles. Here I will point you out just that we can have different looking maps using different sources or different google map types. As an example let us look at the same map above using a satellite map type 
+
+
+```{r}
+#Get the map
+mapMilanSat <- get_map(location=Milan, zoom=10, maptype = "satellite")
+#Visualize the map
+ggmap(mapMilanSat)
+```
+
+Or a map from stamen instead of Google:
+
+```{r}
+#Get the map
+mapMilanStamen <- get_map(location=Milan, zoom=10, source= "stamen", maptype = "toner-2011")
+#Visualize the map
+ggmap(mapMilanStamen)
+```
+
+Nice right? If you want to know more about possible sources and map types or other ggmap customization just type ?ggmap on your console!
+
+But wait...what is the usfulness of a map without data on it? So yes, we need to do a step forward and add some point position to our map layer.
+
+
+First let's generate some data. We will get the coordinates of 20 groceries in Milan from google places API and add them to a data frame. If you do not want to bother using this data, just grab a dataframe with coordinates position and skip ahead!
+
+```{r}
+#We will use jsonlite library to connect to Google API
+library(jsonlite)
+
+#Store the Google Place API (you need to sign up on their website)
+key<-"###################################"
+
+#Compose the first part of the API call
+plcurl<-"https://maps.googleapis.com/maps/api/place/textsearch/json?location="
+
+#Store the coordinates around which Google will look for groceries 
+location.lat <-"45.464211"
+location.lng <-"9.191383"
+location<-paste(location.lat,",",location.lng)
+
+#Tell Goggle what is the radius within which it has to look
+radius<-"50000"
+
+#Tell Google what to look for
+query<-"groceries"
+
+#Structure the request and send it!
+strurl<-as.character(paste(plcurl,location, "&query=", query,"&radius=",radius,"&key=",key, sep=""))
+
+rd<-fromJSON(URLencode(strurl))
+addresses<-rd$results$formatted_address
+
+#Google return a JSOn so we need to put it into a dataframe
+coords <- data.frame(Longitude = as.numeric(as.character(rd$results$geometry$location$lng)),Latitude = as.numeric(as.character(rd$results$geometry$location$lat)),Address=as.character(rd$results$formatted_address), stringsAsFactors = FALSE)
+
+```
+
+Our dataframe looks like this:
+
+```{r}
+head(coords)
+```
+
+This coordinates can be easily superimposed to our map layer using (as in ggplot()) geop_point():
+
+```{r}
+mapMilan +
+  geom_point(data=coords, aes(x=Longitude,y=Latitude), color="red", size=3,alpha=0.5)
+```
+
+
+How easy was that?? And this is just the beginning, ggmap() opens the door to many possibilities for using geo data in R. In the next posts I will be writing more about what geo data are and how to handle and visualize them.
+
+
+
+
